@@ -25,8 +25,6 @@ SECRET_KEY = 'django-insecure-$ga$%hrl&bkw##9b06a)-j-%ckm=-mk**cyah!o3$ema0gw4u6
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
-
 
 # Application definition
 
@@ -40,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'ProjectApp',
     'ChatApp',
+    'User',
     'rest_framework',
     'corsheaders',
     'channels',
@@ -47,7 +46,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',  # 跨域请求
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -77,24 +76,54 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'DjangoProject.wsgi.application'
 
-CORS_ORIGIN_ALLOW_ALL = False
+# 跨域请求白名单
 CORS_ORIGIN_WHITELIST = [
-    "http://localhost:8001",
+    "http://localhost:3000",
+    'http://127.0.0.1:3000'
 ]
-# Database
-# https://docs.djangoproject.com/en/4.2/ref/settings/#databases
+CORS_ALLOWED_ORIGINS = [
+    'http://127.0.0.1:3000',
+    'http://localhost:3000'
+]
 
+# 允许的请求头
+CORS_ALLOW_HEADERS = [
+    '*',
+]
+
+# 允许的请求方式
+CORS_ALLOW_METHODS = [
+    '*',
+]
+
+
+# 连接数据库
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'chat',
+        'USER': 'chat_manager',
+        'PASSWORD': 'manager',
+        'HOST': 'localhost',
+        'PORT': '5432',
     }
 }
 
 
-# Password validation
-# https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
+# redis配置
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://:chat@127.0.0.1:6379/1",  # Redis服务器地址和数据库号
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        }
+    }
+}
 
+
+# https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
+# 密码校验规则配置
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -108,26 +137,32 @@ AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
+    {
+        'NAME': 'DjangoProject.validators.validate_password_complexity',
+    }
 ]
 
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'zh-cn'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Shanghai'
 
 USE_I18N = True
 
 USE_TZ = True
-
+# restframework配置
 REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.BasicAuthentication',
+
     ],
     # 其他设置...
 }
@@ -141,4 +176,18 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+# channels配置
 ASGI_APPLICATION = 'DjangoProject.asgi.application'
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("127.0.0.1", 6379)],
+            'password': "chat"
+        },
+    },
+}
+# 防止post请求不以/结尾导致的报错
+APPEND_SLASH = False
+# 使用自己的USER模型
+AUTH_USER_MODEL = 'User.CustomUser'
